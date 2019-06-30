@@ -15,9 +15,7 @@ class InputProcessor(private val camera: OrthographicCamera, private val receive
 
     override fun fling(velocityX: Float, velocityY: Float, button: Int): Boolean {
         var dir : SwipeDir = SwipeDir.None
-        val offset = 0f
-
-        // TODO - Implement finer swipe control
+        val offset = 0.0f
 
         val angle = atan2(-velocityY, velocityX)
         val sina = sin(angle)
@@ -29,12 +27,12 @@ class InputProcessor(private val camera: OrthographicCamera, private val receive
         if(abs(sina) > abs(cosa)) {
             if(sina > offset)
                 dir = SwipeDir.Up
-            else if(sina < offset)
+            else if(sina < -offset)
                 dir = SwipeDir.Down
         }else {
             if(cosa > offset)
                 dir = SwipeDir.Right
-            else if(cosa < offset)
+            else if(cosa < -offset)
                 dir = SwipeDir.Left
         }
 

@@ -8,13 +8,10 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.maps.tiled.TiledMap
-import com.badlogic.gdx.maps.tiled.TiledMapRenderer
 import com.badlogic.gdx.maps.tiled.TmxMapLoader
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector3
-import kotlin.math.abs
-import kotlin.math.round
 
 class GameOfKotlin : ApplicationAdapter(), InputReceiver {
     // Rendering
@@ -26,36 +23,28 @@ class GameOfKotlin : ApplicationAdapter(), InputReceiver {
     // Tilemap
     private lateinit var map : TiledMap
     private lateinit var tiledMapRenderer: OrthogonalTiledMapRenderer
-
-    // Grid movement
-    private var moving = false
-    private val moveTime = 0.2f
     private val gridSize = 16f
-    private var moveDir = SwipeDir.None
-    private val step
-        get() = (gridSize / moveTime) * Gdx.graphics.deltaTime
 
     override fun create() {
         val screenHeight = Gdx.graphics.height
         val screenWidth = Gdx.graphics.width
 
-
-        val viewportWidth = gridSize * 10f
-        val viewportHeight = (1f * screenHeight / screenWidth) * viewportWidth
+        val viewportHeight = gridSize * 5f
+        val viewportWidth = viewportHeight * screenWidth / screenHeight
 
         Gdx.app.log("Screen", "w: $screenWidth, h: $screenHeight")
         Gdx.app.log("Viewport", "w: $viewportWidth, h: $viewportHeight")
-        Gdx.app.log("Movement data", "gridSize: ${gridSize}, step: ${step}")
 
         camera = OrthographicCamera()
         camera.setToOrtho(false, viewportWidth, viewportHeight)
         batch = SpriteBatch()
 
         characterTexture = Texture(Gdx.files.internal("dude.png"))
-        val initXPos = round(viewportWidth / 2)
-        val initYPos = round(viewportHeight / 2)
-        Gdx.app.log("InitPos", "($initXPos, $initYPos)")
-        characterRect = Rectangle(initXPos, initYPos, gridSize, gridSize)
+        characterRect = Rectangle(96f, 64f, gridSize, gridSize)
+
+        val initCamX = (characterRect.x) / 2f - characterRect.width
+        val initCamY = (characterRect.y) / 2f
+        camera.translate(initCamX, initCamY)
 
         map = TmxMapLoader().load("world1.tmx")
         tiledMapRenderer = OrthogonalTiledMapRenderer(map)
@@ -68,49 +57,52 @@ class GameOfKotlin : ApplicationAdapter(), InputReceiver {
     }
 
     override fun onSwipe(dir: SwipeDir) {
-        if(moving || dir == SwipeDir.None)
-            return
-        moving = true
-        moveDir = dir
-        Gdx.app.log("Movement", "started")
+        moveCharacter(dir)
+        updateCameraPosition(dir)
     }
 
-    fun move() {
-        if(!moving)
-            return
-
-        Gdx.app.log("Movement", "moving by $step")
-        when(moveDir) {
-            SwipeDir.Left -> {
-                characterRect.x -= step
-                camera.translate(-step, 0f)
-            }
-            SwipeDir.Right -> {
-                characterRect.x += step
-                camera.translate(step, 0f)
-            }
-            SwipeDir.Up -> {
-                characterRect.y += step
-                camera.translate(0f, step)
-            }
-            SwipeDir.Down -> {
-                characterRect.y -= step
-                camera.translate(0f, -step)
-            }
+    private fun moveCharacter(dir: SwipeDir) {
+        when(dir) {
+            SwipeDir.Left -> characterRect.x -= gridSize
+            SwipeDir.Right -> characterRect.x += gridSize
+            SwipeDir.Up -> characterRect.y += gridSize
+            SwipeDir.Down -> characterRect.y -= gridSize
             SwipeDir.None -> {}
         }
+    }
 
-        val remX = abs(characterRect.x.rem(gridSize))
-        val remY = abs(characterRect.y.rem(gridSize))
-        val offset = step - 0.01f
-        // TODO - check snapping condition
-        val snapped = (remX < offset || remX > gridSize - offset) && (remY < offset || remY > gridSize - offset)
-        Gdx.app.log("Snapped", "remX: $remX, remY: $remY, offset: $offset")
-        if(moving && snapped) {
-            characterRect.x = round(characterRect.x)
-            characterRect.y = round(characterRect.y)
-            Gdx.app.log("Movement", "stopped")
-            moving = false
+    private fun updateCameraPosition(dir: SwipeDir) {
+        val leftBound = camera.position.x - camera.viewportWidth / 2f
+        val rightBound = camera.position.x + camera.viewportWidth / 2f
+        val upperBound = camera.position.y + camera.viewportHeight / 2f
+        val lowerBound = camera.position.y - camera.viewportHeight / 2f
+
+        val mapWidth = map.properties["width"] as Int * gridSize
+        val mapHeight = map.properties["height"] as Int * gridSize
+
+        val deltaX = characterRect.x - camera.position.x
+        val deltaY = characterRect.y - camera.position.y
+        val xOffset = 2 * gridSize
+        val yOffset = 1 * gridSize
+
+        when(dir) {
+            SwipeDir.Left -> {
+                if(leftBound > 0 && deltaX <= -xOffset)
+                    camera.translate(-gridSize, 0f)
+            }
+            SwipeDir.Right -> {
+                if(rightBound < mapWidth && deltaX >= xOffset)
+                    camera.translate(gridSize, 0f)
+            }
+            SwipeDir.Up -> {
+                if(upperBound < mapHeight && deltaY >= yOffset)
+                    camera.translate(0f, gridSize)
+            }
+            SwipeDir.Down -> {
+                if(lowerBound > 0 && deltaY <= -yOffset)
+                    camera.translate(0f, -gridSize)
+            }
+            SwipeDir.None -> {}
         }
     }
 
@@ -123,8 +115,6 @@ class GameOfKotlin : ApplicationAdapter(), InputReceiver {
 
         tiledMapRenderer.setView(camera)
         tiledMapRenderer.render()
-
-        move()
 
         batch.begin()
         batch.draw(characterTexture, characterRect.x, characterRect.y)
@@ -154,4 +144,57 @@ create()
 render()
     stateTime += Gdx.graphics.deltaTime
     batch.draw(runAnimation.getKeyFrame(stateTime, true), characterRect.x, characterRect.y)
+*/
+
+/*
+Smooth Grid Movement:
+    private var moving = false
+    private val moveTime = 1f
+    private var moveDir = SwipeDir.None
+    private val step
+        get() = (gridSize / moveTime) * Gdx.graphics.deltaTime
+onSwipe(dir):
+    if(moving || dir == SwipeDir.None)
+            return
+    moving = true
+    moveDir = dir
+    Gdx.app.log("Movement", "started")
+move():
+    if(!moving)
+            return
+
+    Gdx.app.log("Movement", "moving by $step")
+    when(moveDir) {
+        SwipeDir.Left -> {
+            characterRect.x -= step
+            camera.translate(-step, 0f)
+        }
+        SwipeDir.Right -> {
+            characterRect.x += step
+            camera.translate(step, 0f)
+        }
+        SwipeDir.Up -> {
+            characterRect.y += step
+            camera.translate(0f, step)
+        }
+        SwipeDir.Down -> {
+            characterRect.y -= step
+            camera.translate(0f, -step)
+        }
+        SwipeDir.None -> {}
+    }
+
+    val remX = abs(characterRect.x.rem(gridSize))
+    val remY = abs(characterRect.y.rem(gridSize))
+    val offset = step - 0.01f
+    // TODO - check snapping condition
+    val snapped = (remX < offset || remX > gridSize - offset) && (remY < offset || remY > gridSize - offset)
+    Gdx.app.log("Snapped", "remX: $remX, remY: $remY, offset: $offset")
+    if(moving && snapped) {
+        characterRect.x = round(characterRect.x)
+        characterRect.y = round(characterRect.y)
+        Gdx.app.log("Movement", "stopped")
+        moving = false
+    }
+
 */
