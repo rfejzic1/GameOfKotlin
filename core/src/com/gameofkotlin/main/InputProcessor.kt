@@ -6,15 +6,25 @@ import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.*
 
-class InputProcessor(private val camera: OrthographicCamera, private val receiver: InputReceiver) : GestureDetector.GestureAdapter() {
+class InputProcessor(private val camera: OrthographicCamera) : GestureDetector.GestureAdapter() {
+    private val receivers = mutableSetOf<InputReceiver>()
+
+    fun subscribe(receiver: InputReceiver) {
+        receivers.add(receiver)
+    }
+
+    fun unsubscribe(receiver: InputReceiver) {
+        receivers.remove(receiver)
+    }
 
     override fun tap(x: Float, y: Float, count: Int, button: Int): Boolean {
-        receiver.onTapped(camera.unproject(Vector3(x, y, 0f)))
+        for(receiver in receivers)
+            receiver.onTapped(camera.unproject(Vector3(x, y, 0f)))
         return false
     }
 
     override fun fling(velocityX: Float, velocityY: Float, button: Int): Boolean {
-        var dir : SwipeDir = SwipeDir.None
+        var dir : Direction = Direction.None
         val offset = 0.0f
 
         val angle = atan2(-velocityY, velocityX)
@@ -26,17 +36,18 @@ class InputProcessor(private val camera: OrthographicCamera, private val receive
 
         if(abs(sina) > abs(cosa)) {
             if(sina > offset)
-                dir = SwipeDir.Up
+                dir = Direction.Up
             else if(sina < -offset)
-                dir = SwipeDir.Down
+                dir = Direction.Down
         }else {
             if(cosa > offset)
-                dir = SwipeDir.Right
+                dir = Direction.Right
             else if(cosa < -offset)
-                dir = SwipeDir.Left
+                dir = Direction.Left
         }
 
-        receiver.onSwipe(dir)
+        for(receiver in receivers)
+            receiver.onSwipe(dir)
         return false
     }
 

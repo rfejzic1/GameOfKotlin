@@ -2,129 +2,99 @@ package com.gameofkotlin.main
 
 import com.badlogic.gdx.ApplicationAdapter
 import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.assets.AssetManager
+import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
 import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.Texture
+import com.badlogic.gdx.graphics.g2d.Animation
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.maps.tiled.TiledMap
 import com.badlogic.gdx.maps.tiled.TmxMapLoader
-import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer
-import com.badlogic.gdx.math.Rectangle
-import com.badlogic.gdx.math.Vector3
 
-class GameOfKotlin : ApplicationAdapter(), InputReceiver {
-    // Rendering
-    private lateinit var camera : OrthographicCamera
+class GameOfKotlin : ApplicationAdapter() {
+    // Main game components
     private lateinit var batch: SpriteBatch
-    private lateinit var characterTexture : Texture
-    private lateinit var characterRect: Rectangle
+    private lateinit var camera: Camera
+    private lateinit var inputProcessor: InputProcessor
+    private lateinit var assetManager: AssetManager
+    private lateinit var map: Map
 
-    // Tilemap
-    private lateinit var map : TiledMap
-    private lateinit var tiledMapRenderer: OrthogonalTiledMapRenderer
-    private val gridSize = 16f
+    private lateinit var characterTexture: Texture
+    private lateinit var batTexture: Texture
+    private lateinit var character: Entity
+
+    // temp
+    private var stateTime = 0f
+    private lateinit var batAnimation: Animation<TextureRegion>
 
     override fun create() {
-        val screenHeight = Gdx.graphics.height
-        val screenWidth = Gdx.graphics.width
+        assetManager = AssetManager()
 
-        val viewportHeight = gridSize * 5f
-        val viewportWidth = viewportHeight * screenWidth / screenHeight
+        assetManager.setLoader(TiledMap::class.java, TmxMapLoader(InternalFileHandleResolver()))
 
-        Gdx.app.log("Screen", "w: $screenWidth, h: $screenHeight")
-        Gdx.app.log("Viewport", "w: $viewportWidth, h: $viewportHeight")
+        assetManager.load("dude.png", Texture::class.java)
+        assetManager.load("bat.png", Texture::class.java)
+        assetManager.load("world1.tmx", TiledMap::class.java)
+        assetManager.update()
+        assetManager.finishLoading()
 
-        camera = OrthographicCamera()
-        camera.setToOrtho(false, viewportWidth, viewportHeight)
+        // todo - explore asset loading and disposing
+        // todo - make camera smooth follow target
+        // todo - implement map loading
+        //  one map object to load the whole map, including objects and doing entity instantiation
+        // todo - game manager object as singleton?
+        //  containing reference to the main camera, other cameras?, the map object, etc.
+        //  referencing one object is easier for accessing all the enumerated ones
+        // todo - collision detection
+        //  the tiled map should have either a collision layer(best option?)
+        //  or have each tile have a 'collidable' property
+        // todo - a level manager will be needed
+        // todo - the map loader and the game design overall should be implemented having the level designing feature in mind
+
+        // temporary
+        val numOfCols = 8
+        val numOfRows = 1
+        batTexture = assetManager["bat.png"]
+
+        val spriteSheet = TextureRegion.split(batTexture, batTexture.width / numOfCols, batTexture.height / numOfRows)
+        val spriteFrames : Array<TextureRegion> = Array(numOfCols * numOfRows) { i -> spriteSheet[i / numOfCols][i.rem(numOfCols)]}
+        batAnimation = Animation(0.0625f, *spriteFrames)
+
+        characterTexture = assetManager["dude.png"]
+        character = Entity(characterTexture, 96f, 64f, GameManager.gridSize, GameManager.gridSize)
+
+        camera = Camera(character)
         batch = SpriteBatch()
+        inputProcessor = InputProcessor(camera)
 
-        characterTexture = Texture(Gdx.files.internal("dude.png"))
-        characterRect = Rectangle(96f, 64f, gridSize, gridSize)
+        map = Map(camera, assetManager["world1.tmx"])
 
-        val initCamX = (characterRect.x) / 2f - characterRect.width
-        val initCamY = (characterRect.y) / 2f
-        camera.translate(initCamX, initCamY)
-
-        map = TmxMapLoader().load("world1.tmx")
-        tiledMapRenderer = OrthogonalTiledMapRenderer(map)
-
-        Gdx.input.inputProcessor = GestureDetector(InputProcessor(camera, this))
-    }
-
-    override fun onTapped(point: Vector3) {
-
-    }
-
-    override fun onSwipe(dir: SwipeDir) {
-        moveCharacter(dir)
-        updateCameraPosition(dir)
-    }
-
-    private fun moveCharacter(dir: SwipeDir) {
-        when(dir) {
-            SwipeDir.Left -> characterRect.x -= gridSize
-            SwipeDir.Right -> characterRect.x += gridSize
-            SwipeDir.Up -> characterRect.y += gridSize
-            SwipeDir.Down -> characterRect.y -= gridSize
-            SwipeDir.None -> {}
-        }
-    }
-
-    private fun updateCameraPosition(dir: SwipeDir) {
-        val leftBound = camera.position.x - camera.viewportWidth / 2f
-        val rightBound = camera.position.x + camera.viewportWidth / 2f
-        val upperBound = camera.position.y + camera.viewportHeight / 2f
-        val lowerBound = camera.position.y - camera.viewportHeight / 2f
-
-        val mapWidth = map.properties["width"] as Int * gridSize
-        val mapHeight = map.properties["height"] as Int * gridSize
-
-        val deltaX = characterRect.x - camera.position.x
-        val deltaY = characterRect.y - camera.position.y
-        val xOffset = 2 * gridSize
-        val yOffset = 1 * gridSize
-
-        when(dir) {
-            SwipeDir.Left -> {
-                if(leftBound > 0 && deltaX <= -xOffset)
-                    camera.translate(-gridSize, 0f)
-            }
-            SwipeDir.Right -> {
-                if(rightBound < mapWidth && deltaX >= xOffset)
-                    camera.translate(gridSize, 0f)
-            }
-            SwipeDir.Up -> {
-                if(upperBound < mapHeight && deltaY >= yOffset)
-                    camera.translate(0f, gridSize)
-            }
-            SwipeDir.Down -> {
-                if(lowerBound > 0 && deltaY <= -yOffset)
-                    camera.translate(0f, -gridSize)
-            }
-            SwipeDir.None -> {}
-        }
+        inputProcessor.subscribe(character)
+        Gdx.input.inputProcessor = GestureDetector(inputProcessor)
     }
 
     override fun render() {
         Gdx.gl.glClearColor(1f, 1f, 1f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        camera.update()
+        camera.updatePosition()
+        map.render()
+
         batch.projectionMatrix = camera.combined
-
-        tiledMapRenderer.setView(camera)
-        tiledMapRenderer.render()
-
         batch.begin()
-        batch.draw(characterTexture, characterRect.x, characterRect.y)
+        character.render(batch)
+        stateTime += Gdx.graphics.deltaTime
+        batch.draw(batAnimation.getKeyFrame(stateTime, true), 96f, 96f)
         batch.end()
     }
 
     override fun dispose() {
-        characterTexture.dispose()
         batch.dispose()
+        character.disposeTexture()
         map.dispose()
+        assetManager.dispose()
     }
 }
 
@@ -132,18 +102,18 @@ class GameOfKotlin : ApplicationAdapter(), InputReceiver {
 Animation:
     private val numOfCols = 1
     private val numOfRows = 1
-    private lateinit var runAnimation: Animation<TextureRegion>
+    private lateinit var batAnimation: Animation<TextureRegion>
     private var stateTime = 0f
 
 create()
     val spriteSheet = TextureRegion.split(characterTexture, characterTexture.width / numOfCols, characterTexture.height / numOfRows)
     val spriteFrames : Array<TextureRegion> = Array(numOfCols * numOfRows) { i -> spriteSheet[i / numOfCols][i.rem(numOfCols)]}
 
-    runAnimation = Animation(0.25f, *spriteFrames)
+    batAnimation = Animation(0.25f, *spriteFrames)
 
 render()
     stateTime += Gdx.graphics.deltaTime
-    batch.draw(runAnimation.getKeyFrame(stateTime, true), characterRect.x, characterRect.y)
+    batch.draw(batAnimation.getKeyFrame(stateTime, true), characterRect.x, characterRect.y)
 */
 
 /*
@@ -187,7 +157,6 @@ move():
     val remX = abs(characterRect.x.rem(gridSize))
     val remY = abs(characterRect.y.rem(gridSize))
     val offset = step - 0.01f
-    // TODO - check snapping condition
     val snapped = (remX < offset || remX > gridSize - offset) && (remY < offset || remY > gridSize - offset)
     Gdx.app.log("Snapped", "remX: $remX, remY: $remY, offset: $offset")
     if(moving && snapped) {
