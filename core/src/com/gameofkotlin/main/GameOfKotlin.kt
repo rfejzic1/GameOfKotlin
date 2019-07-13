@@ -1,6 +1,7 @@
 package com.gameofkotlin.main
 
 import com.badlogic.gdx.ApplicationAdapter
+import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.assets.AssetManager
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver
@@ -14,75 +15,51 @@ import com.badlogic.gdx.maps.tiled.TiledMap
 import com.badlogic.gdx.maps.tiled.TmxMapLoader
 
 class GameOfKotlin : ApplicationAdapter() {
-    // Main game components
     private lateinit var batch: SpriteBatch
-    private lateinit var camera: Camera
-    private lateinit var inputProcessor: InputProcessor
-    private lateinit var assetManager: AssetManager
-    private lateinit var map: Map
 
     private lateinit var characterTexture: Texture
     private lateinit var batTexture: Texture
-    private lateinit var character: Entity
+    private lateinit var character: Player
 
     // temp
     private var stateTime = 0f
     private lateinit var batAnimation: Animation<TextureRegion>
 
     override fun create() {
-        assetManager = AssetManager()
-
-        assetManager.setLoader(TiledMap::class.java, TmxMapLoader(InternalFileHandleResolver()))
-
-        assetManager.load("dude.png", Texture::class.java)
-        assetManager.load("bat.png", Texture::class.java)
-        assetManager.load("world1.tmx", TiledMap::class.java)
-        assetManager.update()
-        assetManager.finishLoading()
-
         // todo - explore asset loading and disposing
-        // todo - make camera smooth follow target
         // todo - implement map loading
         //  one map object to load the whole map, including objects and doing entity instantiation
-        // todo - game manager object as singleton?
-        //  containing reference to the main camera, other cameras?, the map object, etc.
-        //  referencing one object is easier for accessing all the enumerated ones
         // todo - collision detection
-        //  the tiled map should have either a collision layer(best option?)
-        //  or have each tile have a 'collidable' property
         // todo - a level manager will be needed
         // todo - the map loader and the game design overall should be implemented having the level designing feature in mind
 
         // temporary
         val numOfCols = 8
         val numOfRows = 1
-        batTexture = assetManager["bat.png"]
+        batTexture = GameManager.assetManager["bat.png"]
 
         val spriteSheet = TextureRegion.split(batTexture, batTexture.width / numOfCols, batTexture.height / numOfRows)
         val spriteFrames : Array<TextureRegion> = Array(numOfCols * numOfRows) { i -> spriteSheet[i / numOfCols][i.rem(numOfCols)]}
         batAnimation = Animation(0.0625f, *spriteFrames)
 
-        characterTexture = assetManager["dude.png"]
-        character = Entity(characterTexture, 96f, 64f, GameManager.gridSize, GameManager.gridSize)
+        characterTexture = GameManager.assetManager["dude.png"]
+        character = Player(characterTexture)
+        GameManager.mainCamera.setTarget(character)
 
-        camera = Camera(character)
         batch = SpriteBatch()
-        inputProcessor = InputProcessor(camera)
 
-        map = Map(camera, assetManager["world1.tmx"])
-
-        inputProcessor.subscribe(character)
-        Gdx.input.inputProcessor = GestureDetector(inputProcessor)
+        GameManager.inputManager.subscribe(character)
+        Gdx.input.inputProcessor = GestureDetector(GameManager.inputManager)
     }
 
     override fun render() {
         Gdx.gl.glClearColor(1f, 1f, 1f, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        camera.updatePosition()
-        map.render()
+        GameManager.mainCamera.updatePosition()
+        GameManager.currentMap.render()
 
-        batch.projectionMatrix = camera.combined
+        batch.projectionMatrix = GameManager.mainCamera.combined
         batch.begin()
         character.render(batch)
         stateTime += Gdx.graphics.deltaTime
@@ -92,9 +69,7 @@ class GameOfKotlin : ApplicationAdapter() {
 
     override fun dispose() {
         batch.dispose()
-        character.disposeTexture()
-        map.dispose()
-        assetManager.dispose()
+        GameManager.assetManager.dispose()
     }
 }
 

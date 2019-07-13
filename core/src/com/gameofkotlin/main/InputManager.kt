@@ -6,7 +6,7 @@ import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.*
 
-class InputProcessor(private val camera: OrthographicCamera) : GestureDetector.GestureAdapter() {
+class InputManager : GestureDetector.GestureAdapter() {
     private val receivers = mutableSetOf<InputReceiver>()
 
     fun subscribe(receiver: InputReceiver) {
@@ -19,7 +19,7 @@ class InputProcessor(private val camera: OrthographicCamera) : GestureDetector.G
 
     override fun tap(x: Float, y: Float, count: Int, button: Int): Boolean {
         for(receiver in receivers)
-            receiver.onTapped(camera.unproject(Vector3(x, y, 0f)))
+            receiver.onTapped(GameManager.mainCamera.unproject(Vector3(x, y, 0f)))
         return false
     }
 
@@ -31,8 +31,8 @@ class InputProcessor(private val camera: OrthographicCamera) : GestureDetector.G
         val sina = sin(angle)
         val cosa = cos(angle)
 
-        Gdx.app.log("Angle", angle.toString())
-        Gdx.app.log("SinCos", "sin = $sina, cos = $cosa")
+//        Gdx.app.log("Angle", angle.toString())
+//        Gdx.app.log("SinCos", "sin = $sina, cos = $cosa")
 
         if(abs(sina) > abs(cosa)) {
             if(sina > offset)

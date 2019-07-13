@@ -6,7 +6,7 @@ import com.badlogic.gdx.math.MathUtils
 import kotlin.math.abs
 import kotlin.math.sign
 
-class Camera(private var target: Entity) : OrthographicCamera() {
+class Camera(private var target: GameObject) : OrthographicCamera() {
     private val mapWidth = GameManager.worldSize * GameManager.gridSize
     private val mapHeight = GameManager.worldSize * GameManager.gridSize
     private val tilesHigh = 6
@@ -37,9 +37,13 @@ class Camera(private var target: Entity) : OrthographicCamera() {
         lowerBound = 0 + viewportHeight / 2f
     }
 
+    fun setTarget(newTarget: GameObject) {
+        target = newTarget
+    }
+
     fun updatePosition() {
-        val deltaX = (target.x + target.width / 2) - position.x
-        val deltaY = (target.y + target.height / 2) - position.y
+        val deltaX = (target.x + GameManager.gridSize / 2) - position.x
+        val deltaY = (target.y + GameManager.gridSize / 2) - position.y
 
         var xStep = sign(deltaX) * GameManager.step
         var yStep = sign(deltaY) * GameManager.step
