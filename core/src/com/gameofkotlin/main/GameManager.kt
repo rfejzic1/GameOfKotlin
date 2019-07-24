@@ -7,25 +7,39 @@ import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.maps.tiled.TiledMap
 import com.badlogic.gdx.maps.tiled.TmxMapLoader
 
-object GameManager {
+object GameManager : InputReceiver {
     const val gridSize = 16f
-    const val worldSize = 32
-    var gameSpeed = 0.1f
+    private var gameSpeed = 1f
     val step
         get() = (gridSize / gameSpeed) * Gdx.graphics.deltaTime
 
-    var assetManager = AssetManager()
+    var gameState = GameState.Roam
+
+    var assets = AssetManager()
     var mainCamera = Camera(GameObject())
-    var inputManager = InputManager()
-    var currentMap : Map
+    var currentMap : Map = Map(assets["world1.tmx"])
+    var player: Entity
 
     init {
-        assetManager.setLoader(TiledMap::class.java, TmxMapLoader(InternalFileHandleResolver()))
-        assetManager.load("dude.png", Texture::class.java)
-        assetManager.load("bat.png", Texture::class.java)
-        assetManager.load("world1.tmx", TiledMap::class.java)
-        assetManager.finishLoading()
+        assets.setLoader(TiledMap::class.java, TmxMapLoader(InternalFileHandleResolver()))
 
-        currentMap = Map(assetManager["world1.tmx"])
+        assets.load("dude.png", Texture::class.java)
+        assets.load("world1.tmx", TiledMap::class.java)
+        assets.finishLoading()
+
+        player = Entity(assets["dude.png"], 112f, 112f)
+    }
+
+    override fun onSwipe(dir: Direction) {
+        if(gameState != GameState.Roam)
+            return
+
+        player.move(dir)
+        if(currentMap.shouldStartBattle())
+            startBattle()
+    }
+
+    private fun startBattle() {
+        gameState = GameState.Battle
     }
 }

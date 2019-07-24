@@ -3,17 +3,13 @@ package com.gameofkotlin.main
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 
-class Player(private val texture : Texture) : GameObject(112f, 112f), InputReceiver, Renderable {
+class Entity(private val texture : Texture, xPos: Float = 0f, yPos: Float = 0f) : GameObject(xPos, yPos), Renderable {
 
     override fun render(batch: SpriteBatch) {
         batch.draw(texture, x, y)
     }
 
-    override fun onSwipe(dir: Direction) {
-        move(dir)
-    }
-
-    private fun move(dir: Direction) {
+    fun move(dir: Direction) {
         when(dir) {
             Direction.Left -> {
                 val newX = x - GameManager.gridSize

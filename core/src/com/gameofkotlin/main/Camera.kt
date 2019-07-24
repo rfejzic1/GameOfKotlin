@@ -7,9 +7,10 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 class Camera(private var target: GameObject) : OrthographicCamera() {
-    private val mapWidth = GameManager.worldSize * GameManager.gridSize
-    private val mapHeight = GameManager.worldSize * GameManager.gridSize
+    private val mapWidth = GameManager.currentMap.worldSize * GameManager.gridSize
+    private val mapHeight = GameManager.currentMap.worldSize * GameManager.gridSize
     private val tilesHigh = 6
+    private val camSpeed = 8f
 
     private var leftBound = 0f
     private var rightBound = 0f
@@ -45,8 +46,8 @@ class Camera(private var target: GameObject) : OrthographicCamera() {
         val deltaX = (target.x + GameManager.gridSize / 2) - position.x
         val deltaY = (target.y + GameManager.gridSize / 2) - position.y
 
-        var xStep = sign(deltaX) * GameManager.step
-        var yStep = sign(deltaY) * GameManager.step
+        var xStep = sign(deltaX) * GameManager.step * camSpeed
+        var yStep = sign(deltaY) * GameManager.step * camSpeed
 
         if(deltaX < xOffset + GameManager.step && deltaX > -xOffset - GameManager.step)
             xStep = 0f

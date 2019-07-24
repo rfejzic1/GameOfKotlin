@@ -1,12 +1,10 @@
 package com.gameofkotlin.main
 
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.input.GestureDetector
 import com.badlogic.gdx.math.Vector3
 import kotlin.math.*
 
-class InputManager : GestureDetector.GestureAdapter() {
+object InputManager : GestureDetector.GestureAdapter() {
     private val receivers = mutableSetOf<InputReceiver>()
 
     fun subscribe(receiver: InputReceiver) {
